@@ -6,38 +6,55 @@
 #include <iostream>
 using namespace llvm;
 
-int countInstructions(Function &F) {
+int countInstructions(Function * F) {
+	errs() << "Entering count instructions\n";
 	int count = 0;
+	errs() << "Checking for seg fault\n";
+	errs() << F->getName();
+	errs() << "\n";
 
-	for (Function::iterator it = F.begin(); it != F.end(); it++) {
+	for (Function::iterator it = F->begin(); it != F->end(); it++) {
+		errs() << "Entering count function iteration\n";
 		BasicBlock & B = *it;
         for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
-          count += 1;
+        	errs() << "Entering count block iteration\n";
+        	count += 1;
         }
     }
 
+    errs() << "Leaving count instructions\n";
     return count;
 }
 
 int startInline(Function & F) {
+	errs() << "Entering startInline\n";
 	int numCalls = 0;
 	std::map <std::string, int> numInstr;
 	// Iterate over each function in the Module and call the replacement functions on it
 	for (Function::iterator it = F.begin(); it != F.end(); it++) {
+		errs() << "Entering function iteration\n";
 		BasicBlock & B = *it;
         for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
+        	errs() << "Entering basicblock iteration\n";
         	Instruction & I =  *b_it;
 		    if (CallInst * CI = dyn_cast<CallInst>(&I)) {
-		        // We know we've encountered a call instruction, so we
-		        // need to determine if it's a call to the
-		        // function pointed to by m_func or not.
-		        numInstr[CI->getCalledFunction()->getName()] = countInstructions(*CI->getCalledFunction());
+		    	errs() << "Found a call instr\n";
+		    	Function * F = CI->getCalledFunction();
+		    	if (F && !F->isDeclaration()) {
+		    		numInstr[CI->getCalledFunction()->getName()] = countInstructions(CI->getCalledFunction());
+		    		errs() << numInstr[CI->getCalledFunction()->getName()];
+			        errs() << "\n";
 
-		        if (numInstr[CI->getCalledFunction()->getName()] < 10) {
-		        	startInline(*CI->getCalledFunction());
-		        }
+			    	errs() << "Back in startInline\n";
+			    	
+			        if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+			        	errs() << "beginning recursive call\n";
+			        	startInline(*CI->getCalledFunction());
+			        }
 
-		        numCalls += 1;
+			        numCalls += 1;
+			        errs() << numCalls;
+		    	}
 		    }
         }
      }
@@ -56,7 +73,13 @@ int startInline(Function & F) {
 	            // We know we've encountered a call instruction, so we
 	            // need to determine if it's a call to the
 	            // function pointed to by m_func or not.
-	            //cloneAllInst(CallInst);
+	            
+	            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+		        	//cloneAllInstr(CI);
+		        	errs() << "This function would be cloned\n";
+		        	errs() << CI->getCalledFunction()->getName();
+		        	errs() << "\n";
+		        }
 	          }
 	        }
 	     }
@@ -71,12 +94,9 @@ namespace {
 		static char ID;
 		funcInline() : FunctionPass(ID) {}
 		virtual bool runOnFunction(Function & F) {
-			startInline(F);
-			/*
 			errs() << "funcInline: ";
 			errs().write_escaped(F.getName()) << '\n';
-			return false;
-			*/
+			startInline(F);
 			return false;
 		}
 	};
