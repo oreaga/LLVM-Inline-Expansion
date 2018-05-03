@@ -71,65 +71,69 @@ int startInlineCI(CallInst * callI) {
 		    	Function * F = CI->getCalledFunction();
 		    	if (F && !F->isDeclaration()) {
 		    		errs() << "Is not a declaration\n";
+		    		errs() << F->getName(); 
 		    		numInstr[CI->getCalledFunction()->getName()] = countInstructions(CI->getCalledFunction());
 		    		errs() << numInstr[CI->getCalledFunction()->getName()];
 			        errs() << "\n";
 
 			    	errs() << "Back in startInline\n";
 			    	
-			    	/*
 			        if (numInstr[CI->getCalledFunction()->getName()] < 10) {
 			        	errs() << "beginning recursive call\n";
 			        	startInlineCI(CI);
 			        }
-			        */
 
 			        numCalls += 1;
 			        errs() << numCalls;
 		    	}
 		    }
         }
-     }
+    }
 
-     if (numCalls == 0) {
+    if (numCalls == 0) {
      	// Call function to replace arguments with constant values
      	std::cout << "Reached leaf node";
      	createAndReplace(callI);
-     }
-     /*
-     else {
+    }
+    else {
      	for (Function::iterator it = F.begin(); it != F.end(); it++) {
      		BasicBlock & B = *it;
 	        for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
 	        	Instruction & I = *b_it;
-	          if (CallInst * CI = dyn_cast<CallInst>(&I)) {
-	            Function * F = CI->getCalledFunction();
+		        if (CallInst * CI = dyn_cast<CallInst>(&I)) {
+		            Function * FF = CI->getCalledFunction();
 
-	            if (F && !F->isDeclaration()) {
-		            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
-			        	ValueToValueMapTy vmap;
+		            if (FF && !FF->isDeclaration()) {
+		            	errs() << "Inlining function: ";
+		            	errs() << FF->getName();
+		            	errs() << "\n";
+			            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+				        	ValueToValueMapTy vmap;
 
-						for (Function::iterator it = F->begin(); it != F->end(); it++) {
-							BasicBlock & B = *it;
-							for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
-								Instruction & inst = *b_it;
-								Instruction * new_inst = inst.clone();
-								B.getInstList().insert(&inst, new_inst);
-								vmap[&inst] = new_inst;
-								RemapInstruction(new_inst, vmap, RF_NoModuleLevelChanges);							
+							for (Function::iterator it = FF->begin(); it != FF->end(); it++) {
+								BasicBlock & BB = *it;
+								for (BasicBlock::iterator b_it = BB.begin(); b_it != BB.end(); b_it++) {
+									errs() << "Creating new instruction!!!!!!\n";
+									Instruction & inst = *b_it;
+									errs() << "Got instruction from iterator\n";
+									Instruction * new_inst = inst.clone();
+									errs() << "Cloned instruction\n";
+									new_inst->insertBefore(&I);
+									errs() << "Instruction inserted\n";	
+									vmap[&inst] = new_inst;
+									RemapInstruction(new_inst, vmap, RF_NoModuleLevelChanges);							
+								}
+
 							}
-
-						}
-			        	errs() << "This function would be cloned\n";
-			        	errs() << CI->getCalledFunction()->getName();
-			        	errs() << "\n";
-			        }
-			    }
-	          }
+				        	errs() << "This function would be cloned\n";
+				        	errs() << CI->getCalledFunction()->getName();
+				        	errs() << "\n";
+				        }
+				    }
+		        }
 	        }
-	     }
-     }
-     */
+	    }
+    }
 
      return 0;
 }
@@ -159,7 +163,7 @@ int startInline(Function & F) {
 			    	
 			        if (numInstr[CI->getCalledFunction()->getName()] < 10) {
 			        	errs() << "beginning recursive call\n";
-			        	startInline(*CI->getCalledFunction());
+			        	startInlineCI(CI);
 			        }
 
 			        numCalls += 1;
@@ -175,38 +179,47 @@ int startInline(Function & F) {
         }
      }
 
-    /*
  	for (Function::iterator it = F.begin(); it != F.end(); it++) {
  		BasicBlock & B = *it;
         for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
         	Instruction & I = *b_it;
-          if (CallInst * CI = dyn_cast<CallInst>(&I)) {
-            Function * F = CI->getCalledFunction();
+	          if (CallInst * CI = dyn_cast<CallInst>(&I)) {
+	            Function * F = CI->getCalledFunction();
 
-            if (F && !F->isDeclaration()) {
-	            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
-		        	llvm::ValueToValueMapTy vmap;
+	            if (F && !F->isDeclaration()) {
+	            	errs() << "Inlining function: ";
+	            	errs() << F->getName();
+	            	errs() << "\n";
+		            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+			        	llvm::ValueToValueMapTy vmap;
 
-					for (Function::iterator it = F->begin(); it != F->end(); it++) {
-						BasicBlock & B = *it;
-						for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
-							Instruction & inst = *b_it;
-							Instruction * newInst = inst.clone();
-							B.getInstList().insert(inst, newInst);
-							vmap[&inst] = newInst;
-							RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);							
+						for (Function::iterator it = F->begin(); it != F->end(); it++) {
+							BasicBlock & BB = *it;
+							for (BasicBlock::iterator b_it = BB.begin(); b_it != BB.end(); b_it++) {
+								Instruction & inst = *b_it;
+								if (ReturnInst * RI = dyn_cast<ReturnInst>(&inst)) {
+
+								}
+								else {
+									errs() << "Creating new instruction!!!!!!\n";
+									Instruction * newInst = inst.clone();
+									errs() << "**Instruction has been cloned\n";
+									newInst->insertBefore(&I);
+									errs() << "Instruction has been inserted\n";
+									vmap[&inst] = newInst;
+									RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);
+								}							
+							}
+
 						}
-
-					}
-		        	errs() << "This function would be cloned\n";
-		        	errs() << CI->getCalledFunction()->getName();
-		        	errs() << "\n";
-		        }
-		    }
+			        	errs() << "This function would be cloned\n";
+			        	errs() << CI->getCalledFunction()->getName();
+			        	errs() << "\n";
+			        }
+			    }
           }
         }
      }
-     */
 
      return 0;
 }
