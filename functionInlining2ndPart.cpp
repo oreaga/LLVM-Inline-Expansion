@@ -10,6 +10,7 @@ using namespace llvm;
 
 bool checkConstant(Value * V) {
 	if (isa<Constant>(V)) {
+		errs() << "Found constant\n";
 		return true;
 	}
 	else {
@@ -17,18 +18,52 @@ bool checkConstant(Value * V) {
 	}
 }
 
+bool checkAllArgsConstant(CallInst * CI) {
+	for (int i = 0; i < CI->getNumArgOperands(); i++) {
+		Value * arg = CI->getArgOperand(i);
+		errs() << *arg;
+		errs() << "\n";
+		if (!checkConstant(arg)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void createAndReplace(CallInst * callee) {
+	errs() << "Replacing arguments for: ";
+	errs() << callee->getCalledFunction()->getName();
+	errs() << "\n";
 	LLVMContext & context = callee->getCalledFunction()->getContext();
 	IntegerType * i32_type = IntegerType::getInt32Ty(context);
+	Function * F = callee->getCalledFunction();
 
 	for (int i = 0; i < callee->getNumArgOperands(); i++) {
 		Value * arg = callee->getArgOperand(i);
 
+
 		if (checkConstant(arg)) {
+			errs() << "Found a constant argument\n";
 			Constant * argConstant = cast<Constant>(arg);
+			errs() << "After cast\n";
 			uint64_t argInt = argConstant->getUniqueInteger().getZExtValue();
+			errs() << "After int\n";
 			ConstantInt * c_int = ConstantInt::get(i32_type, argInt);
-			arg->replaceAllUsesWith(c_int);
+			errs() << "After constant int\n";
+			errs() << *c_int;
+			errs() << "\n";
+
+			int count = 0;
+			for (Function::arg_iterator ait = F->arg_begin(); ait != F->arg_end(); ait++) {
+				if (count == i) {
+					Value & funcArg = *ait;
+					funcArg.replaceAllUsesWith(c_int);
+				}
+
+				count++;
+			}
+			errs() << "Done replacing argument\n";
 		}
 	}
 }
@@ -92,8 +127,10 @@ int startInlineCI(CallInst * callI) {
 
     if (numCalls == 0) {
      	// Call function to replace arguments with constant values
-     	std::cout << "Reached leaf node";
-     	createAndReplace(callI);
+     	errs() << "Reached leaf node";
+     	if (checkAllArgsConstant(callI)) {
+     		createAndReplace(callI);
+     	}
     }
     else {
      	for (Function::iterator it = F.begin(); it != F.end(); it++) {
@@ -107,7 +144,7 @@ int startInlineCI(CallInst * callI) {
 		            	errs() << "Inlining function: ";
 		            	errs() << FF->getName();
 		            	errs() << "\n";
-			            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+			            if (numInstr[CI->getCalledFunction()->getName()] < 10 && checkAllArgsConstant(CI)) {
 				        	ValueToValueMapTy vmap;
 
 							for (Function::iterator it = FF->begin(); it != FF->end(); it++) {
@@ -186,11 +223,15 @@ int startInline(Function & F) {
 	          if (CallInst * CI = dyn_cast<CallInst>(&I)) {
 	            Function * F = CI->getCalledFunction();
 
-	            if (F && !F->isDeclaration()) {
+	            if (F && !F->isDeclaration() ) {
 	            	errs() << "Inlining function: ";
 	            	errs() << F->getName();
 	            	errs() << "\n";
-		            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+	            	errs() << (numInstr[CI->getCalledFunction()->getName()] < 10);
+	            	errs() << "\n";
+	            	errs() << checkAllArgsConstant(CI);
+	            	errs() << "\n";
+		            if (numInstr[CI->getCalledFunction()->getName()] < 10 && checkAllArgsConstant(CI)) {
 			        	llvm::ValueToValueMapTy vmap;
 
 						for (Function::iterator it = F->begin(); it != F->end(); it++) {
@@ -203,6 +244,7 @@ int startInline(Function & F) {
 								else {
 									errs() << "Creating new instruction!!!!!!\n";
 									Instruction * newInst = inst.clone();
+									errs() << *newInst;
 									errs() << "**Instruction has been cloned\n";
 									newInst->insertBefore(&I);
 									errs() << "Instruction has been inserted\n";
