@@ -4,6 +4,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <map>
 #include <iostream>
 using namespace llvm;
@@ -236,9 +237,25 @@ int startInline(Function & F) {
 
 						for (Function::iterator it = F->begin(); it != F->end(); it++) {
 							BasicBlock & BB = *it;
-							for (BasicBlock::iterator b_it = BB.begin(); b_it != BB.end(); b_it++) {
-								Instruction & inst = *b_it;
+							for (BasicBlock::iterator bb_it = BB.begin(); bb_it != BB.end(); bb_it++) {
+								Instruction & inst = *bb_it;
 								if (ReturnInst * RI = dyn_cast<ReturnInst>(&inst)) {
+									Value * retVal = RI->getReturnValue();
+									errs() << retVal;
+									errs() << "\n";
+									errs() << "~~~~~~Return Instruction~~~~~~~: \n";
+									errs() << *bb_it;
+									errs() << "\n";
+									errs() << *CI;
+									if (retVal) {
+										AllocaInst ai = AllocaInst(retVal->getType());
+										ai.insertBefore(CI);
+										StoreInst * si = StoreInst(retVal, &ai, CI); 
+										CI->replaceAllUsesWith(si->getValueOperand());
+									}
+									else {
+										CI->eraseFromParent();
+									}
 
 								}
 								else {
@@ -257,6 +274,7 @@ int startInline(Function & F) {
 			        	errs() << "This function would be cloned\n";
 			        	errs() << CI->getCalledFunction()->getName();
 			        	errs() << "\n";
+			        	//CI->eraseFromParent();
 			        }
 			    }
           }
