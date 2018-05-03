@@ -96,39 +96,40 @@ int startInlineCI(CallInst * callI) {
      	std::cout << "Reached leaf node";
      	createAndReplace(callI);
      }
+     /*
      else {
      	for (Function::iterator it = F.begin(); it != F.end(); it++) {
      		BasicBlock & B = *it;
 	        for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
 	        	Instruction & I = *b_it;
 	          if (CallInst * CI = dyn_cast<CallInst>(&I)) {
-	            // We know we've encountered a call instruction, so we
-	            // need to determine if it's a call to the
-	            // function pointed to by m_func or not.
-	            
-	            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
-		        	ValueToValueMapTy vmap;
-		        	Function * F = CI->getCalledFunction();
+	            Function * F = CI->getCalledFunction();
 
-					for (Function::iterator it = F->begin(); it != F->end(); it++) {
-						BasicBlock & B = *it;
-						for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
-							Instruction & inst = *b_it;
-							Instruction * new_inst = inst.clone();
-							B.getInstList().insert(&inst, new_inst);
-							vmap[&inst] = new_inst;
-							RemapInstruction(new_inst, vmap, RF_NoModuleLevelChanges);							
+	            if (F && !F->isDeclaration()) {
+		            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+			        	ValueToValueMapTy vmap;
+
+						for (Function::iterator it = F->begin(); it != F->end(); it++) {
+							BasicBlock & B = *it;
+							for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
+								Instruction & inst = *b_it;
+								Instruction * new_inst = inst.clone();
+								B.getInstList().insert(&inst, new_inst);
+								vmap[&inst] = new_inst;
+								RemapInstruction(new_inst, vmap, RF_NoModuleLevelChanges);							
+							}
+
 						}
-
-					}
-		        	errs() << "This function would be cloned\n";
-		        	errs() << CI->getCalledFunction()->getName();
-		        	errs() << "\n";
-		        }
+			        	errs() << "This function would be cloned\n";
+			        	errs() << CI->getCalledFunction()->getName();
+			        	errs() << "\n";
+			        }
+			    }
 	          }
 	        }
 	     }
      }
+     */
 
      return 0;
 }
@@ -156,12 +157,10 @@ int startInline(Function & F) {
 
 			    	errs() << "Back in startInline\n";
 			    	
-			    	/*
 			        if (numInstr[CI->getCalledFunction()->getName()] < 10) {
 			        	errs() << "beginning recursive call\n";
 			        	startInline(*CI->getCalledFunction());
 			        }
-			        */
 
 			        numCalls += 1;
 			        errs() << numCalls;
@@ -176,37 +175,38 @@ int startInline(Function & F) {
         }
      }
 
+    /*
  	for (Function::iterator it = F.begin(); it != F.end(); it++) {
  		BasicBlock & B = *it;
         for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
         	Instruction & I = *b_it;
           if (CallInst * CI = dyn_cast<CallInst>(&I)) {
-            // We know we've encountered a call instruction, so we
-            // need to determine if it's a call to the
-            // function pointed to by m_func or not.
-            
-            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
-	        	llvm::ValueToValueMapTy vmap;
-	        	Function * F = CI->getCalledFunction();
+            Function * F = CI->getCalledFunction();
 
-				for (Function::iterator it = F->begin(); it != F->end(); it++) {
-					BasicBlock & B = *it;
-					for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
-						Instruction & inst = *b_it;
-						Instruction * newInst = inst.clone();
-						B.getInstList().insert(inst, newInst);
-						vmap[&inst] = newInst;
-						RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);							
+            if (F && !F->isDeclaration()) {
+	            if (numInstr[CI->getCalledFunction()->getName()] < 10) {
+		        	llvm::ValueToValueMapTy vmap;
+
+					for (Function::iterator it = F->begin(); it != F->end(); it++) {
+						BasicBlock & B = *it;
+						for (BasicBlock::iterator b_it = B.begin(); b_it != B.end(); b_it++) {
+							Instruction & inst = *b_it;
+							Instruction * newInst = inst.clone();
+							B.getInstList().insert(inst, newInst);
+							vmap[&inst] = newInst;
+							RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);							
+						}
+
 					}
-
-				}
-	        	errs() << "This function would be cloned\n";
-	        	errs() << CI->getCalledFunction()->getName();
-	        	errs() << "\n";
-	        }
+		        	errs() << "This function would be cloned\n";
+		        	errs() << CI->getCalledFunction()->getName();
+		        	errs() << "\n";
+		        }
+		    }
           }
         }
      }
+     */
 
      return 0;
 }
