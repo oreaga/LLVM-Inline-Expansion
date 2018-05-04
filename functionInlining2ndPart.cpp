@@ -238,20 +238,50 @@ int startInline(Function & F) {
 						for (Function::iterator it = F->begin(); it != F->end(); it++) {
 							BasicBlock & BB = *it;
 							for (BasicBlock::iterator bb_it = BB.begin(); bb_it != BB.end(); bb_it++) {
+								errs() << "Check erase two\n";
 								Instruction & inst = *bb_it;
 								if (ReturnInst * RI = dyn_cast<ReturnInst>(&inst)) {
 									Value * retVal = RI->getReturnValue();
-									errs() << retVal;
+									errs() << *retVal;
 									errs() << "\n";
 									errs() << "~~~~~~Return Instruction~~~~~~~: \n";
 									errs() << *bb_it;
 									errs() << "\n";
 									errs() << *CI;
 									if (retVal) {
-										AllocaInst ai = AllocaInst(retVal->getType());
-										ai.insertBefore(CI);
-										StoreInst * si = StoreInst(retVal, &ai, CI); 
-										CI->replaceAllUsesWith(si->getValueOperand());
+										/*
+										AllocaInst * ai = new AllocaInst(retVal->getType());
+										ai->insertBefore(bb_it);
+										Instruction * newInst = ai->clone();
+										newInst->insertBefore(&I);
+										vmap[&inst] = newInst;
+										RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);
+										StoreInst * si = new StoreInst(retVal, ai);
+										si->insertAfter(ai);
+										newInst = si->clone();
+										newInst->insertBefore(&I);
+										vmap[&inst] = newInst;
+										RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);
+										CI->replaceAllUsesWith(si);
+										
+										Instruction * newInst = inst->clone();
+										newInst->insertBefore(&I);
+										*/
+
+
+
+										//newInst = si->clone();
+										//newInst->insertBefore(&I);
+
+										Instruction * newInst = inst.clone();
+										newInst->insertBefore(&I);
+										vmap[&inst] = newInst;
+										RemapInstruction(newInst, vmap, RF_NoModuleLevelChanges);
+										ReturnInst * rInst = dyn_cast<ReturnInst>(newInst);
+										CI->replaceAllUsesWith(rInst->getReturnValue());
+										newInst->eraseFromParent();
+										CI->eraseFromParent();
+										errs() << "Check erase\n";
 									}
 									else {
 										CI->eraseFromParent();
@@ -275,6 +305,7 @@ int startInline(Function & F) {
 			        	errs() << CI->getCalledFunction()->getName();
 			        	errs() << "\n";
 			        	//CI->eraseFromParent();
+			        	break;
 			        }
 			    }
           }
